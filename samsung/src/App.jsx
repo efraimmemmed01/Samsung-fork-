@@ -12,6 +12,9 @@ import ExploreSection from './components/ExploreSection/ExploreSection'
 import Footer from './components/Footer/Footer'
 import SkeletonLoader from './components/SkeletonLoader/SkeletonLoader'
 import LiveWidget from './components/LiveWidget/LiveWidget'
+import Toast from './components/common/Toast'
+import Preloader from './components/common/Preloader'
+import SupportWidget from './components/common/SupportWidget'
 
 const App = () => {
   const [loading, setLoading] = useState(true)
@@ -22,28 +25,19 @@ const App = () => {
     return () => clearTimeout(timer)
   }, [])
 
-  // Scroll animasiya dəstəyi
+  // Parallax üçün scroll dəstəyi
   useEffect(() => {
     const handleScroll = () => {
-      // CSS parallax dəyişəni
       document.documentElement.style.setProperty('--scroll-y', `${window.scrollY}`)
-
-      // Intersection Observer əvəzinə manual scroll-animate
-      const elements = document.querySelectorAll('.section-animate')
-      elements.forEach((el) => {
-        const rect = el.getBoundingClientRect()
-        if (rect.top < window.innerHeight * 0.9) {
-          el.classList.add('visible')
-        }
-      })
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
-    handleScroll() // ilk render
+    handleScroll()
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   return (
     <div className="min-h-screen overflow-x-hidden">
+      <Preloader />
       {/* Header - həmişə göstər */}
       <Header />
 
@@ -86,8 +80,14 @@ const App = () => {
       {/* Live Video Widget */}
       <LiveWidget />
 
+      {/* Support Chat Widget */}
+      <SupportWidget />
+
       {/* Yuxarı Qayıt Düyməsi */}
       <BackToTop />
+
+      {/* Toast Notification */}
+      <Toast />
     </div>
   )
 }
@@ -101,12 +101,34 @@ const BackToTop = () => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  const scrollToTopSlowly = () => {
+    const startY = window.scrollY;
+    const duration = 1500; // 1.5 seconds for a slow scroll
+    const startTime = performance.now();
+
+    const animateScroll = (currentTime) => {
+      const timeElapsed = currentTime - startTime;
+      const progress = Math.min(timeElapsed / duration, 1);
+
+      // Easing function: easeOutCubic
+      const easeProgress = 1 - Math.pow(1 - progress, 3);
+
+      window.scrollTo(0, startY * (1 - easeProgress));
+
+      if (timeElapsed < duration) {
+        requestAnimationFrame(animateScroll);
+      }
+    };
+
+    requestAnimationFrame(animateScroll);
+  };
+
   if (!visible) return null
 
   return (
     <button
-      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      className="fixed bottom-8 right-6 z-50 bg-[#1428A0] hover:bg-[#0d1f7a] text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-xl"
+      onClick={scrollToTopSlowly}
+      className="fixed bottom-8 right-6 z-50 bg-[#1428A0] hover:bg-[#0d1f7a] text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-xl focus:ring-4 focus:ring-black focus:outline-none"
       aria-label="Yuxarı qayıt"
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none">

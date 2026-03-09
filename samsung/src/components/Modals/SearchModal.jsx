@@ -1,7 +1,10 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import { useLanguage } from '../../context/LanguageContext'
 
 const SearchModal = ({ isOpen, onClose }) => {
   const inputRef = useRef(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const { t } = useLanguage()
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -31,8 +34,24 @@ const SearchModal = ({ isOpen, onClose }) => {
       name: 'OLED S90C 65" TV',
       img: '/images/SDSAC-9810-OLEDS90-HP-FeaturedCard-560x560.jpg',
       price: '$1,599.99'
+    },
+    {
+      id: 3,
+      name: 'Bespoke 4-Door Flex™ Refrigerator',
+      img: '/images/SDSAC-9955-Bespoke-Refrigerator-HP-Product-tile-560x560.jpg',
+      price: '$3,499.00'
+    },
+    {
+      id: 4,
+      name: 'Galaxy Watch6 Classic',
+      img: '/images/HOME_Feature-Card_Galaxy-Watch8_560x560.jpg',
+      price: '$399.99'
     }
   ]
+
+  const filteredProducts = searchTerm
+    ? productSuggestions.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    : productSuggestions;
 
   return (
     <div className="fixed inset-0 z-[1000] flex flex-col pt-16 md:pt-24 bg-white/95 backdrop-blur-md animate-fade-in px-4 sm:px-8 md:px-16" onClick={onClose}>
@@ -57,7 +76,9 @@ const SearchModal = ({ isOpen, onClose }) => {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search products, orders, and more..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={t('search', 'placeholder')}
             className="w-full text-2xl md:text-4xl lg:text-5xl font-extrabold text-[#1d1d1d] bg-transparent border-b-2 border-gray-300 py-4 focus:outline-none focus:border-black transition-colors"
           />
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-400">
@@ -69,7 +90,13 @@ const SearchModal = ({ isOpen, onClose }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {/* Trending Searches */}
           <div>
-            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">Trending Searches</h3>
+            <h3 className="text-sm font-bold flex items-center gap-2 text-[#1428A0] uppercase tracking-widest mb-4">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              </svg>
+              {t('search', 'aiSuggest')}
+            </h3>
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">{t('search', 'popular')}</h4>
             <div className="flex flex-wrap gap-2">
               {trendingSearches.map(term => (
                 <button 
@@ -84,9 +111,11 @@ const SearchModal = ({ isOpen, onClose }) => {
 
           {/* Product Suggestions */}
           <div>
-            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">Suggested Products</h3>
-            <div className="space-y-4">
-              {productSuggestions.map(prod => (
+            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">
+              {searchTerm ? 'Search Results' : 'Suggested Products'}
+            </h3>
+            <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+              {filteredProducts.length > 0 ? filteredProducts.map(prod => (
                 <a key={prod.id} href="#" className="flex items-center gap-4 group p-2 rounded-2xl hover:bg-white hover:shadow-lg transition-all">
                   <div className="w-16 h-16 bg-[#f4f4f4] rounded-xl p-2 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
                     <img src={prod.img} alt={prod.name} className="max-w-full max-h-full mix-blend-multiply" />
@@ -96,7 +125,11 @@ const SearchModal = ({ isOpen, onClose }) => {
                     <p className="text-xs text-gray-500 mt-1">{prod.price}</p>
                   </div>
                 </a>
-              ))}
+              )) : (
+                <div className="text-gray-500 py-4 text-center">
+                  No products found for "{searchTerm}"
+                </div>
+              )}
             </div>
           </div>
         </div>

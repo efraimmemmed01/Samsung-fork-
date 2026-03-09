@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'
 import MegaMenu from './MegaMenu'
 import MobileMenu from './MobileMenu'
+import StickySubNav from './StickySubNav'
 import SearchModal from '../Modals/SearchModal'
 import CartDrawer from '../Cart/CartDrawer'
+import { useCart } from '../../context/CartContext'
+import { useLanguage } from '../../context/LanguageContext'
 
 const navItems = [
   {
@@ -205,8 +208,8 @@ const Header = () => {
   const [scrolled, setScrolled] = useState(false)
   const [isVisible, setIsVisible] = useState(true)
   const [searchOpen, setSearchOpen] = useState(false)
-  const [cartOpen, setCartOpen] = useState(false)
-  const [searchVal, setSearchVal] = useState('')
+  const { isCartOpen, setIsCartOpen, cartItems } = useCart()
+  const { language, changeLanguage, t } = useLanguage()
   const menuRef = useRef(null)
   const timeoutRef = useRef(null)
   const lastScrollY = useRef(0)
@@ -251,19 +254,24 @@ const Header = () => {
     <>
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-in-out ${
-          scrolled ? 'header-solid' : 'header-transparent'
+          scrolled ? 'bg-[#1c1d21]/95 backdrop-blur-md border-b border-white/5 shadow-lg' : 'bg-transparent'
         } ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}
       >
-        {/* Yuxarı utility bar — Support, For Business */}
+        {/* Yuxarı utility bar — Language, Support, For Business */}
         <div className="gnb-utility-bar hidden md:block">
           <div className="max-w-[1440px] mx-auto px-6 lg:px-10 flex items-center justify-end h-[40px] gap-5">
+            <div className="flex items-center gap-2 border-r border-white/20 pr-4">
+              <button onClick={() => changeLanguage('az')} className={`text-[12px] font-bold ${language === 'az' ? 'text-white' : 'text-white/60 hover:text-white'}`}>AZ</button>
+              <button onClick={() => changeLanguage('ru')} className={`text-[12px] font-bold ${language === 'ru' ? 'text-white' : 'text-white/60 hover:text-white'}`}>RU</button>
+              <button onClick={() => changeLanguage('en')} className={`text-[12px] font-bold ${language === 'en' ? 'text-white' : 'text-white/60 hover:text-white'}`}>EN</button>
+            </div>
             <a
               href="https://www.samsung.com/us/support/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-white/90 hover:text-white text-[13px] font-bold tracking-[0.01em] transition-colors duration-200"
             >
-              Support
+              {t('nav', 'support')}
             </a>
             <a
               href="https://www.samsung.com/us/business/"
@@ -271,7 +279,7 @@ const Header = () => {
               rel="noopener noreferrer"
               className="text-white/90 hover:text-white text-[13px] font-bold tracking-[0.01em] transition-colors duration-200 inline-flex items-center gap-[3px]"
             >
-              For Business
+              {t('nav', 'forBusiness')}
               <svg width="11" height="11" viewBox="0 0 96 96" fill="currentColor" className="opacity-80">
                 <path d="M81.436 14.564v54.285h-8V28.221L18.22 83.436l-5.656-5.656L67.78 22.563l-40.629.001v-8z" />
               </svg>
@@ -288,30 +296,34 @@ const Header = () => {
             </a>
 
             {/* Desktop Nav Linkləri */}
-            <nav className="hidden lg:flex items-center gap-0 flex-1" ref={menuRef}>
-              {navItems.map((item) => (
-                <div
-                  key={item.label}
-                  className="group"
-                  onMouseEnter={() => handleMenuEnter(item.label)}
-                  onMouseLeave={handleMenuLeave}
-                >
-                  <button
-                    className={`gnb-nav-link px-[14px] py-[14px] text-[14px] font-bold tracking-[0.01em] transition-colors duration-200 whitespace-nowrap ${
-                      activeMenu === item.label ? 'text-white' : 'text-white/90 hover:text-white'
-                    }`}
+            <nav className="hidden lg:flex items-center gap-0 flex-1 ml-4" ref={menuRef}>
+              {navItems.map((item) => {
+                const navKey = item.label.toLowerCase().replace(/ & /g, '').replace(/ /g, '')
+                const translatedLabel = t('nav', navKey) === `nav.${navKey}` ? item.label : t('nav', navKey)
+                return (
+                  <div
+                    key={item.label}
+                    className="group"
+                    onMouseEnter={() => handleMenuEnter(item.label)}
+                    onMouseLeave={handleMenuLeave}
                   >
-                    {item.label}
-                  </button>
-                  {activeMenu === item.label && item.mega && (
-                    <MegaMenu
-                      data={item.mega}
-                      onMouseEnter={() => clearTimeout(timeoutRef.current)}
-                      onMouseLeave={handleMenuLeave}
-                    />
-                  )}
-                </div>
-              ))}
+                    <button
+                      className={`gnb-nav-link px-[12px] py-[14px] text-[14px] font-bold transition-colors duration-200 whitespace-nowrap ${
+                        activeMenu === item.label ? 'text-white' : 'text-white/90 hover:text-white hover:bg-white/5 rounded-full'
+                      }`}
+                    >
+                      {translatedLabel}
+                    </button>
+                    {activeMenu === item.label && item.mega && (
+                      <MegaMenu
+                        data={item.mega}
+                        onMouseEnter={() => clearTimeout(timeoutRef.current)}
+                        onMouseLeave={handleMenuLeave}
+                      />
+                    )}
+                  </div>
+                )
+              })}
             </nav>
 
             {/* Sağ tərəf — Search, Cart, Account */}
@@ -331,13 +343,18 @@ const Header = () => {
 
               {/* Cart */}
               <button
-                onClick={() => setCartOpen(true)}
-                className="p-[6px] text-white hover:text-white/80 transition-colors duration-200 relative"
+                onClick={() => setIsCartOpen(true)}
+                className="p-[6px] text-white hover:text-white/80 transition-colors duration-200 relative flex items-center justify-center"
                 aria-label="Cart"
               >
                 <svg width="18" height="18" viewBox="0 0 96 96" fill="currentColor">
                   <path d="M72.817 71.324c5.522 0 10 4.478 10 10 0 5.524-4.477 10-10 10s-10-4.476-10-10c0-5.522 4.477-10 10-10zm-34.946 0c5.523 0 10 4.478 10 10 0 5.524-4.477 10-10 10-5.522 0-10-4.476-10-10 0-5.521 4.479-10 10-10zm34.946 5a5.001 5.001 0 000 10 5 5 0 100-10zm-34.946 0a5 5 0 10.001 9.999 5 5 0 00-.001-9.999zM13.674 5c1.62 0 3.11 1.117 3.6 2.648l.054.186 3.208 12.292h70.035c2.126 0 3.61 1.88 3.194 3.914l-.041.18-9.398 36.292c-.405 1.566-1.849 2.747-3.459 2.835l-.194.006H29.57c-1.619 0-3.11-1.118-3.6-2.65l-.054-.185L12.725 10l-11.614.007-.002-5L13.674 5zm74.65 20.126H21.842l8.674 33.226H79.72l8.604-33.226z" />
                 </svg>
+                {cartItems.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                    {cartItems.reduce((total, item) => total + item.quantity, 0)}
+                  </span>
+                )}
               </button>
 
               {/* Account */}
@@ -381,14 +398,16 @@ const Header = () => {
       {/* Mobile Menu */}
       {mobileOpen && (
         <MobileMenu
-        isOpen={mobileOpen}
-        onClose={() => setMobileOpen(false)}
-        navItems={navItems}
-      />
+          onClose={() => setMobileOpen(false)}
+          navItems={navItems}
+        />
       )}
       {/* Modals & Drawers */}
+      {/* Sticky Sub Nav */}
+      <StickySubNav />
+
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
-      <CartDrawer isOpen={cartOpen} onClose={() => setCartOpen(false)} />
+      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </>
   )
 }

@@ -1,16 +1,111 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 
 const LiveWidget = () => {
   const [isVisible, setIsVisible] = useState(true)
+  const [position, setPosition] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+  const [hasMoved, setHasMoved] = useState(false)
+  const [isLongPressing, setIsLongPressing] = useState(false)
+
+  const widgetRef = useRef(null)
+  const dragStartRef = useRef({ x: 0, y: 0 })
+  const initialPosRef = useRef({ x: 0, y: 0 })
+  const longPressTimerRef = useRef(null)
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDragging || !isLongPressing) return
+
+      const dx = e.clientX - dragStartRef.current.x
+      const dy = e.clientY - dragStartRef.current.y
+
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        setHasMoved(true)
+      }
+
+      setPosition({
+        x: initialPosRef.current.x + dx,
+        y: initialPosRef.current.y + dy
+      })
+    }
+
+    const handleMouseUp = (e) => {
+      clearTimeout(longPressTimerRef.current)
+      if (isDragging) {
+        setIsDragging(false)
+        setIsLongPressing(false)
+        // Allow time for click events to evaluate hasMoved before resetting it
+        setTimeout(() => setHasMoved(false), 50)
+      }
+    }
+
+    const handleTouchMove = (e) => {
+      if (!isDragging || !isLongPressing || !e.touches[0]) return
+
+      const dx = e.touches[0].clientX - dragStartRef.current.x
+      const dy = e.touches[0].clientY - dragStartRef.current.y
+
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        setHasMoved(true)
+      }
+
+      // Prevent scrolling while dragging
+      e.preventDefault()
+
+      setPosition({
+        x: initialPosRef.current.x + dx,
+        y: initialPosRef.current.y + dy
+      })
+    }
+
+    if (isDragging && isLongPressing) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.addEventListener('touchmove', handleTouchMove, { passive: false })
+      document.addEventListener('touchend', handleMouseUp)
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('touchmove', handleTouchMove)
+      document.removeEventListener('touchend', handleMouseUp)
+    }
+  }, [isDragging])
+
+  const handlePointerDown = (e) => {
+    // Determine pointer coordinates
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY
+
+    dragStartRef.current = { x: clientX, y: clientY }
+    initialPosRef.current = { x: position.x, y: position.y }
+    setIsDragging(true)
+    setHasMoved(false)
+
+    // Wait for 300ms to consider it a long press / drag start
+    longPressTimerRef.current = setTimeout(() => {
+      setIsLongPressing(true)
+    }, 300)
+  }
 
   if (!isVisible) return null
 
   return (
-    <div className="fixed bottom-4 right-4 z-[100] w-[200px] h-[112px] md:w-[240px] md:h-[135px] bg-black rounded-[20px] shadow-2xl overflow-hidden group transition-transform hover:-translate-y-1">
+    <div
+      ref={widgetRef}
+      onMouseDown={handlePointerDown}
+      onTouchStart={handlePointerDown}
+      style={{
+        transform: `translate(${position.x}px, ${position.y}px)`,
+        cursor: isLongPressing ? 'grabbing' : 'grab'
+      }}
+      className={`fixed bottom-4 right-4 z-[100] w-[200px] h-[112px] md:w-[240px] md:h-[135px] bg-black rounded-[20px] shadow-2xl overflow-hidden group select-none ${!isLongPressing ? 'transition-transform hover:-translate-y-1' : ''}`}
+    >
       {/* Youtube Video İframe - pointer-events-none ki, üzərində hover animasiyası edə bilək */}
       <iframe
         className="absolute inset-0 w-full h-[140%] -top-[20%] object-cover pointer-events-none"
-        src="https://www.youtube.com/embed/Ce0Ki5eCZ7g?autoplay=1&mute=1&controls=0&modestbranding=1&playsinline=1&loop=1&playlist=Ce0Ki5eCZ7g"
+        src="https://www.youtube.com/embed/DopZM8uRD0c?si=PZ_LUiR1Wa8yoht5&autoplay=1&mute=1&loop=1&playlist=DopZM8uRD0c"
         title="Live Stream"
         frameBorder="0"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -50,9 +145,15 @@ const LiveWidget = () => {
 
       {/* Divin üstünə basıldıqda youtube-a getməsi üçün bütöv link qatı */}
       <a 
-        href="https://www.youtube.com/watch?v=Ce0Ki5eCZ7g" 
+        href="https://www.youtube.com/watch?v=DopZM8uRD0c" 
         target="_blank" 
         rel="noopener noreferrer" 
+        onClick={(e) => {
+          if (hasMoved || isLongPressing) {
+            e.preventDefault()
+            e.stopPropagation()
+          }
+        }}
         className="absolute inset-0 z-20"
         aria-label="Watch News Live on YouTube"
       ></a>
